@@ -7,7 +7,7 @@ class pmf(probabilistic_model):
         self.n_dims = 10
         self.n_users = n_users
         self.n_animes = n_animes
-        self.U = np.zeros((self.n_dims, self.n_users), dtype=np.float64)
+        self.U = np.random.normal(0.0, 1.0 / lambda_U, (self.n_dims, self.n_users))
         self.V = np.random.normal(0.0, 1.0 / lambda_V, (self.n_dims, self.n_animes))
         self.lambda_U = lambda_U
         self.lambda_V = lambda_V
@@ -22,20 +22,38 @@ class pmf(probabilistic_model):
         self.min_rating = 0
         
     def update_parameters(self):
+        # Update U (user latent matrix)
         for i in range(self.n_users):
-            V_j = self.V[:, self.R[i, :] > 0]
-            self.U[:, i] = np.dot(np.linalg.inv(np.dot(V_j, V_j.T) + self.lambda_U * np.identity(self.n_dims)), np.dot(self.R[i, self.R[i, :] > 0], V_j.T))
-            
+            item_indices = self.R[i, :] > 0
+            if np.sum(item_indices) == 0:
+                continue  # skip users with no ratings
+
+            V_j = self.V[:, item_indices]
+            ratings_i = self.R[i, item_indices]
+
+            A = V_j @ V_j.T + self.lambda_U * np.identity(self.n_dims)
+            b = V_j @ ratings_i.T
+            self.U[:, i] = np.linalg.solve(A, b)
+
+        # Update V (item latent matrix)
         for j in range(self.n_animes):
-            U_i = self.U[:, self.R[:, j] > 0]
-            self.V[:, j] = np.dot(np.linalg.inv(np.dot(U_i, U_i.T) + self.lambda_V * np.identity(self.n_dims)), np.dot(self.R[self.R[:, j] > 0, j], U_i.T))
-            
+            user_indices = self.R[:, j] > 0
+            if np.sum(user_indices) == 0:
+                continue  # skip items with no ratings
+
+            U_i = self.U[:, user_indices]
+            ratings_j = self.R[user_indices, j]
+
+            A = U_i @ U_i.T + self.lambda_V * np.identity(self.n_dims)
+            b = U_i @ ratings_j.T
+            self.V[:, j] = np.linalg.solve(A, b)
+                
 
     def log_a_posteriori(self):        
         UV = np.dot(self.U.T, self.V)
         R_UV = (self.R[self.R > 0] - UV[self.R > 0])
         
-        return -0.5 * (np.sum(np.dot(R_UV, R_UV.T)) + self.lambda_U * np.sum(np.dot(self.U, self.U.T)) + self.lambda_V * np.sum(np.dot(self.V, self.V.T)))
+        return -0.5 * (np.sum(R_UV ** 2) + self.lambda_U * np.sum(np.dot(self.U, self.U.T)) + self.lambda_V * np.sum(np.dot(self.V, self.V.T)))
         
 
     def predict(self, user_id, anime_id):
@@ -58,9 +76,9 @@ class pmf(probabilistic_model):
 
 
     def update_max_min_ratings(self):
-        self.R = self.U.T @ self.V
-        self.min_rating = np.min(self.R)
-        self.max_rating = np.max(self.R)
+        predictions = self.U.T @ self.V
+        self.min_rating = np.min(predictions)
+        self.max_rating = np.max(predictions)
         
     def train(self, train_set, test_set, n_epochs):
         for index, row in train_set.iterrows():
