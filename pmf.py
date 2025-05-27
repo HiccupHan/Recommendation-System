@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import root_mean_squared_error
 from main_model import probabilistic_model
 
 class pmf(probabilistic_model):
@@ -64,21 +64,21 @@ class pmf(probabilistic_model):
 
 
     def evaluate(self, dataset):
-        ground_truths = []
-        predictions = []
+        y_true = []
+        y_pred = []
         
         for index, row in dataset.iterrows():
-            ground_truths.append(row.loc['rating'])
-            predictions.append(self.predict(row.loc['user_id'], row.loc['anime_id']))
+            y_true.append(row.loc['rating'])
+            y_pred.append(self.predict(row.loc['user_id'], row.loc['anime_id']))
         
-        return mean_squared_error(ground_truths, predictions, squared=False)
+        return root_mean_squared_error(y_true, y_pred)
         
 
 
     def update_max_min_ratings(self):
-        predictions = self.U.T @ self.V
-        self.min_rating = np.min(predictions)
-        self.max_rating = np.max(predictions)
+        y_pred = self.U.T @ self.V
+        self.min_rating = np.min(y_pred)
+        self.max_rating = np.max(y_pred)
         
     def train(self, train_set, test_set, n_epochs):
         for index, row in train_set.iterrows():
