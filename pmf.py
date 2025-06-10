@@ -67,14 +67,19 @@ class pmf(probabilistic_model):
         y_pred = []
         for index, row in dataset.iterrows():
             y_true.append(row['rating'])
-            y_pred.append(self.predict(row['user_id'], row['anime_id']) / 5.0)
+            y_pred.append(self.predict(row['user_id'], row['anime_id']) / 5.0)  # denormalize
         return root_mean_squared_error(y_true, y_pred)
-
-
+        
     def update_max_min_ratings(self):
         y_pred = self.U.T @ self.V
         self.min_rating = np.min(y_pred)
         self.max_rating = np.max(y_pred)
+        
+    def train_loss(self):
+        UV = np.dot(self.U.T, self.V)
+        R_pred = UV[self.R > 0]
+        R_true = self.R[self.R > 0]
+        return np.mean((R_true - R_pred) ** 2)
         
     def train(self, train_set, test_set, n_epochs):
         for index, row in train_set.iterrows():
@@ -94,14 +99,12 @@ class pmf(probabilistic_model):
             self.update_parameters()
             log_ap = self.log_a_posteriori()
             log_aps.append(log_ap)
+            self.update_max_min_ratings()
 
-            if (k + 1) % 1 == 0:
-                self.update_max_min_ratings()
-
-                rmse_train.append(self.evaluate(train_set))
-                rmse_test.append(self.evaluate(test_set))
+            rmse_train.append(self.evaluate(train_set))
+            rmse_test.append(self.evaluate(test_set))
             if (k + 1) % 10 == 0:
-                print('Log p a-posteriori at iteration', k + 1, ':', log_ap)
+                print('Log p a-posteriori at iteration', k + 1, ':', log_ap, ", RMSE train:", rmse_train[-1], ", RMSE test:", rmse_test[-1], ", Train loss:", self.train_loss())
 
         self.update_max_min_ratings()
 
