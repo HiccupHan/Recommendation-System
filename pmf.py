@@ -3,8 +3,8 @@ from sklearn.metrics import root_mean_squared_error
 from main_model import probabilistic_model
 
 class pmf(probabilistic_model):
-    def __init__(self, n_users, n_animes, lambda_U, lambda_V, uniq_users, uniq_animes):
-        self.n_dims = 10
+    def __init__(self, n_users, n_animes, lambda_U, lambda_V, uniq_users, uniq_animes, n_dimesions=50):
+        self.n_dims = n_dimesions
         self.n_users = n_users
         self.n_animes = n_animes
         self.U = np.random.normal(0.0, 1.0 / lambda_U, (self.n_dims, self.n_users))
@@ -62,17 +62,13 @@ class pmf(probabilistic_model):
         return 0 if self.max_rating == self.min_rating else ((r_ij[0][0] - self.min_rating) / (self.max_rating - self.min_rating)) * 5.0
 
 
-
     def evaluate(self, dataset):
         y_true = []
         y_pred = []
-        
         for index, row in dataset.iterrows():
-            y_true.append(row.loc['rating'])
-            y_pred.append(self.predict(row.loc['user_id'], row.loc['anime_id']))
-        
+            y_true.append(row['rating'])
+            y_pred.append(self.predict(row['user_id'], row['anime_id']) / 5.0)
         return root_mean_squared_error(y_true, y_pred)
-        
 
 
     def update_max_min_ratings(self):
@@ -99,11 +95,12 @@ class pmf(probabilistic_model):
             log_ap = self.log_a_posteriori()
             log_aps.append(log_ap)
 
-            if (k + 1) % 10 == 0:
+            if (k + 1) % 1 == 0:
                 self.update_max_min_ratings()
 
                 rmse_train.append(self.evaluate(train_set))
                 rmse_test.append(self.evaluate(test_set))
+            if (k + 1) % 10 == 0:
                 print('Log p a-posteriori at iteration', k + 1, ':', log_ap)
 
         self.update_max_min_ratings()
