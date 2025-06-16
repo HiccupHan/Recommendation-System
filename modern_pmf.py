@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import root_mean_squared_error
+from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from main_model import probabilistic_model
 
 class opt_pmf(probabilistic_model):
@@ -51,6 +51,7 @@ class opt_pmf(probabilistic_model):
         criterion = nn.MSELoss()
 
         log_aps, rmse_train, rmse_test = [], [], []
+        mae_train, mae_test = [], []
 
         for epoch in range(n_epochs):
             self.model.train()
@@ -61,17 +62,18 @@ class opt_pmf(probabilistic_model):
                 loss = criterion(preds, rating_batch)
                 loss.backward()
                 optimizer.step()
-
+              
+            rmse_tr, mae_tr = self.evaluate(train_set)
+            rmse_te, mae_te = self.evaluate(test_set)
+            rmse_train.append(rmse_tr)
+            rmse_test.append(rmse_te)
+            mae_train.append(mae_tr)
+            mae_test.append(mae_te)
             if (epoch + 1) % 10 == 0 or epoch == 0:
-                rmse_train.append(self.evaluate(train_set))
-                rmse_test.append(self.evaluate(test_set))
+
                 print(f"Epoch {epoch+1}: Train RMSE = {rmse_train[-1]:.4f}, Test RMSE = {rmse_test[-1]:.4f}")
 
-        # For consistency with original API
-        preds = [self.predict(row['user_id'], row['anime_id']) for _, row in test_set.iterrows()]
-        print("Predicted rating range:", min(preds), "to", max(preds))
-
-        return log_aps, [rmse_train[0]] + rmse_train, [rmse_test[0]] + rmse_test
+        return log_aps, rmse_train, rmse_test, mae_train, mae_test
 
     def _prepare_data(self, df):
         user_ids = torch.tensor([self.user_to_row[u] for u in df['user_id']], dtype=torch.long)
@@ -98,4 +100,4 @@ class opt_pmf(probabilistic_model):
         for _, row in dataset.iterrows():
             y_true.append(row['rating'])
             y_pred.append(self.predict(row['user_id'], row['anime_id']))
-        return root_mean_squared_error(y_true, y_pred)
+        return root_mean_squared_error(y_true, y_pred), mean_absolute_error(y_true, y_pred)

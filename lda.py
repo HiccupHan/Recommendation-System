@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from main_model import probabilistic_model
 from sklearn.model_selection import KFold
 
@@ -102,7 +102,7 @@ class lda_model(probabilistic_model):
             pred = self.predict(row["user_id"], row["anime_id"])
             y_true.append(row["rating"])
             y_pred.append(pred)
-        return np.sqrt(mean_squared_error(y_true, y_pred))
+        return np.sqrt(mean_squared_error(y_true, y_pred)), mean_absolute_error(y_true, y_pred)
 
     def train_loss(self):
         return None
@@ -136,7 +136,7 @@ class lda_model(probabilistic_model):
                             val_fold = train_set.iloc[val_idx]
                             
                             self.train(train_fold, val_fold)
-                            rmse = self.evaluate(val_fold)
+                            rmse, mae = self.evaluate(val_fold)
                             rmse_scores.append(rmse)
                         
                         avg_rmse = np.mean(rmse_scores)

@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import root_mean_squared_error
+from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from main_model import probabilistic_model
 
 class pmf(probabilistic_model):
@@ -62,7 +62,7 @@ class pmf(probabilistic_model):
             pred = self.predict(row['user_id'], row['anime_id'])
             y_true.append(row['rating'])
             y_pred.append(pred)
-        return root_mean_squared_error(y_true, y_pred)
+        return root_mean_squared_error(y_true, y_pred), mean_absolute_error(y_true, y_pred)
 
     def log_a_posteriori(self):
         error = 0.0
@@ -92,19 +92,24 @@ class pmf(probabilistic_model):
         log_aps = []
         rmse_train = []
         rmse_test = []
-
+        mae_train = []
+        mae_test = []
+        
         for k in range(n_epochs):
             self.update_parameters()
+            log_ap = self.log_a_posteriori()
+            log_aps.append(log_ap)
+            rmse_tr, mae_tr = self.evaluate(train_set)
+            rmse_te, mae_te = self.evaluate(test_set)
+            rmse_train.append(rmse_tr)
+            rmse_test.append(rmse_te)
+            mae_train.append(mae_tr)
+            mae_test.append(mae_te)
             if (k + 1) % 10 == 0 or k == 0 or k == n_epochs - 1:
-                log_ap = self.log_a_posteriori()
-                log_aps.append(log_ap)
-                rmse_tr = self.evaluate(train_set)
-                rmse_te = self.evaluate(test_set)
-                rmse_train.append(rmse_tr)
-                rmse_test.append(rmse_te)
-
                 print('Log p a-posteriori at iteration', k + 1, ':', log_ap,
                       ", RMSE train:", rmse_train[-1],
-                      ", RMSE test:", rmse_test[-1])
+                      ", RMSE test:", rmse_test[-1],
+                      ", MAE train:", mae_train[-1],
+                      ", MAE test:", mae_test[-1])
 
-        return log_aps, rmse_train, rmse_test
+        return log_aps, rmse_train, rmse_test, mae_train, mae_test
