@@ -3,10 +3,22 @@ UCLA CS267A project to explore the effectiveness of different probabilistic mode
 Unzip data.zip before running code
 
 ### main\.ipynb
-Main python file with the dataset already processed
+Main Jupyter notebook file, just need to run all cells
 
 ### main_model\.py
 Python class for probabilistic model
 
 ### pmf\.py
-PMF model
+ALS-based PMF model
+
+### modern_pmf\.py
+SGD-based PMF model
+
+### LDA\.py
+LDA model
+
+### run_pmf\.py
+Run PMF model by itself with python run_pmf.py
+
+### pmf\.py
+Run LDA model by itself with python run_lda.py
